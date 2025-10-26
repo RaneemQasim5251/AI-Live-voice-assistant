@@ -1,0 +1,7 @@
+{
+  "name": "Al Jeri Investment Group - Oracle Assistant",
+  "description": "An intelligent chat widget for Al Jeri Investment Group, providing support via an AI assistant with Oracle context or a live human agent. Features include text and live chat, bilingual support (English/Arabic), and speech-to-text/text-to-speech capabilities powered by Gemini.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
