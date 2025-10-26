@@ -1,5 +1,4 @@
-
-import { Language } from './types';
+import { Language, Theme } from './types';
 
 export const CONFIG = {
   brand: {
@@ -7,7 +6,8 @@ export const CONFIG = {
     site: "https://aljeriinvestment.com/",
     primaryColor: "#0A3D62",
     accentColor: "#18A999",
-    darkMode: "auto",
+    // FIX: Cast "auto" to Theme to ensure correct type inference.
+    darkMode: "auto" as Theme,
   },
   modes: ["text", "liveChat"],
   voices: {
@@ -20,7 +20,8 @@ export const CONFIG = {
   },
   routing: {
     language: "auto",
-    fallbackLanguage: "en",
+    // FIX: Cast "en" to Language to ensure correct type inference.
+    fallbackLanguage: "en" as Language,
     allowManualSwitch: true,
   },
   oracle: {
@@ -45,7 +46,7 @@ export const CONFIG = {
   },
   features: {
     quickReplies: true,
-    actionChips: ["Phase 2 modules", "Use Oracle feature", "Open ticket"],
+    actionChips: ['phase_2', 'use_oracle', 'open_ticket'], // Using keys now
     csat: true,
   },
 };
@@ -60,29 +61,33 @@ Provide links/buttons (open ticket, switch to Live Chat) when appropriate.`;
 
 export const UI_TEXT: Record<Language, any> = {
   en: {
+    companyName: "Al Jeri Investment Group",
     welcome: "Hi there! I’m your Al Jeri assistant. How can I help you today?",
     textChat: "Text Chat",
-    liveChat: "Live Chat",
+    liveChat: "Voice Chat",
     inputPlaceholder: "Type a message...",
-    liveChatTitle: "Talk to a Human",
-    liveChatDesc: "Our agents are available to help you. Please fill out the form below to start.",
-    nameLabel: "Name",
-    emailLabel: "Email / Employee ID",
-    reasonLabel: "Reason for chat",
-    startChatButton: "Start Live Chat",
+    actionChips: {
+      phase_2: "Phase 2 modules",
+      use_oracle: "Use Oracle feature",
+      open_ticket: "Open ticket"
+    },
+    liveChatTitle: "Voice Conversation",
+    liveChatDesc: "Click the mic to start a real-time voice conversation with the assistant.",
     queueMessage: "You’re in the queue. Estimated wait: ~2–4 minutes.",
   },
   ar: {
+    companyName: "مجموعة الجري الاستثمارية",
     welcome: "يا هلا والله! أنا مساعدك في الجري. وش تبين/تبي ننجز اليوم؟ 😊",
     textChat: "محادثة نصية",
-    liveChat: "محادثة مباشرة",
+    liveChat: "محادثة صوتية",
     inputPlaceholder: "اكتب رسالة...",
-    liveChatTitle: "تحدث مع موظف",
-    liveChatDesc: "موظفينا متاحين لمساعدتك. يرجى تعبئة النموذج أدناه للبدء.",
-    nameLabel: "الاسم",
-    emailLabel: "البريد الإلكتروني / رقم الموظف",
-    reasonLabel: "سبب المحادثة",
-    startChatButton: "ابدأ المحادثة المباشرة",
+    actionChips: {
+        phase_2: "وحدات المرحلة الثانية",
+        use_oracle: "استخدام ميزة Oracle",
+        open_ticket: "فتح تذكرة"
+    },
+    liveChatTitle: "محادثة صوتية",
+    liveChatDesc: "انقر على الميكروفون لبدء محادثة صوتية مباشرة مع المساعد.",
     queueMessage: "أنت في قائمة الانتظار. الوقت التقريبي للانتظار: ٢-٤ دقائق.",
   }
 };

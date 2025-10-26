@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Message, Language } from '../types';
@@ -143,8 +142,15 @@ const TextChat: React.FC<{ language: Language }> = ({ language }) => {
         const scriptProcessor = sttAudioContext.createScriptProcessor(4096, 1, 1);
         scriptProcessorRef.current = scriptProcessor;
 
+        let lastInterimText = '';
         liveSessionRef.current = connectLiveAudio((text, isFinal) => {
-            setInput(prev => prev + text);
+            if (isFinal) {
+                setInput(prev => prev.replace(lastInterimText, text));
+                lastInterimText = '';
+            } else {
+                setInput(prev => prev.replace(lastInterimText, '') + text);
+                lastInterimText = text;
+            }
         });
         
         scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
@@ -211,13 +217,13 @@ const TextChat: React.FC<{ language: Language }> = ({ language }) => {
           </button>
         </div>
         <div className="flex space-x-2 mt-2">
-            {CONFIG.features.actionChips.map(chip => (
+            {CONFIG.features.actionChips.map(chipKey => (
                 <button 
-                  key={chip} 
-                  onClick={() => setInput(chip)}
+                  key={chipKey} 
+                  onClick={() => setInput(T.actionChips[chipKey])}
                   className="px-3 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500"
                 >
-                    {chip}
+                    {T.actionChips[chipKey]}
                 </button>
             ))}
         </div>

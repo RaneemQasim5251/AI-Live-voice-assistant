@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Mode, Language, Theme } from '../types';
 import { CONFIG, UI_TEXT } from '../constants';
 import TextChat from './TextChat';
 import LiveChat from './LiveChat';
-import { MoonIcon, SunIcon, CloseIcon } from './Icons';
+import { MoonIcon, SunIcon, CloseIcon, RobotIcon } from './Icons';
 
 interface ChatWidgetProps {
   closeWidget: () => void;
@@ -34,9 +33,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ closeWidget, theme, togg
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-        <div className="flex items-center space-x-2">
-            <img src="https://aljeriinvestment.com/wp-content/uploads/2021/07/cropped-Aljeri-Holding-FA-E-C-01.png" alt="Logo" className="h-8 w-8 rounded-full" />
-            <h2 className="text-lg font-bold text-gray-800 dark:text-white">{CONFIG.brand.company}</h2>
+        <div className={`flex items-center space-x-3 ${language === 'ar' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+            <RobotIcon className={`h-8 w-8 text-brand-primary dark:text-white ${language === 'ar' ? 'transform scale-x-[-1]' : ''}`} />
+            <h2 className={`text-lg font-bold text-gray-800 dark:text-white ${language === 'ar' ? 'font-arabic' : 'font-sans'}`}>{T.companyName}</h2>
         </div>
         <div className="flex items-center space-x-2">
             <button onClick={toggleTheme} className="p-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">
@@ -44,6 +43,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ closeWidget, theme, togg
             </button>
             <select
                 value={language}
+                // FIX: Cast the event target value to Language to match the state setter's expected type.
                 onChange={(e) => setLanguage(e.target.value as Language)}
                 className="bg-transparent text-gray-600 dark:text-gray-300 font-semibold rounded-md p-1 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-brand-accent"
             >

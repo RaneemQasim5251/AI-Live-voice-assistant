@@ -1,10 +1,20 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { Language } from '../types';
 import { startLiveConversation, LiveSession } from '../services/geminiService';
 import { decodeAudioData, encode } from '../utils/audioUtils';
 import { MicIcon } from './Icons';
+import { UI_TEXT } from '../constants';
 
-const TranscriptBubble: React.FC<{ speaker: string; text: string; language: Language; isFinal: boolean; }> = ({ speaker, text, language, isFinal }) => {
+interface Transcript {
+    id: string;
+    speaker: 'You' | 'Assistant';
+    text: string;
+    isFinal: boolean;
+}
+
+const TranscriptBubble: React.FC<{ transcript: Transcript; language: Language; }> = ({ transcript, language }) => {
+    const { speaker, text, isFinal } = transcript;
     const isUser = speaker === 'You';
     const align = isUser ? (language === 'ar' ? 'text-right' : 'text-left') : (language === 'ar' ? 'text-right' : 'text-left');
     const textColor = isUser ? 'text-brand-primary dark:text-brand-accent' : 'text-gray-900 dark:text-gray-100';
@@ -21,9 +31,7 @@ const TranscriptBubble: React.FC<{ speaker: string; text: string; language: Lang
 const LiveChat: React.FC<{ language: Language }> = ({ language }) => {
     const [isSessionActive, setIsSessionActive] = useState(false);
     const [statusText, setStatusText] = useState("Click the mic to start the conversation");
-    const [conversation, setConversation] = useState<{ speaker: string, text: string }[]>([]);
-    const [currentUserTranscript, setCurrentUserTranscript] = useState("");
-    const [currentAssistantTranscript, setCurrentAssistantTranscript] = useState("");
+    const [conversation, setConversation] = useState<Transcript[]>([]);
 
     const liveSessionRef = useRef<Promise<LiveSession> | null>(null);
     const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -34,22 +42,23 @@ const LiveChat: React.FC<{ language: Language }> = ({ language }) => {
     const audioSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
     const nextStartTimeRef = useRef<number>(0);
     
-    const currentUserTranscriptRef = useRef("");
-    const currentAssistantTranscriptRef = useRef("");
+    const currentUserTurnIdRef = useRef<string | null>(null);
+    const currentAssistantTurnIdRef = useRef<string | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const T = UI_TEXT[language];
+
+    useEffect(() => {
+        setStatusText(T.liveChatDesc);
+    }, [T]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [conversation, currentUserTranscript, currentAssistantTranscript]);
+    }, [conversation]);
 
     const stopAllPlayback = useCallback(() => {
         audioSourcesRef.current.forEach(source => {
-            try {
-                source.stop();
-            } catch (e) {
-                // Ignore errors if source already stopped
-            }
+            try { source.stop(); } catch (e) { /* Ignore */ }
         });
         audioSourcesRef.current.clear();
         nextStartTimeRef.current = 0;
@@ -70,11 +79,8 @@ const LiveChat: React.FC<{ language: Language }> = ({ language }) => {
             source.start(nextStartTimeRef.current);
             nextStartTimeRef.current += audioBuffer.duration;
             
-            source.onended = () => {
-                audioSourcesRef.current.delete(source);
-            };
+            source.onended = () => audioSourcesRef.current.delete(source);
             audioSourcesRef.current.add(source);
-
         } catch (error) {
             console.error("Error playing assistant audio:", error);
         }
@@ -82,7 +88,7 @@ const LiveChat: React.FC<{ language: Language }> = ({ language }) => {
 
     const handleStopSession = useCallback(() => {
         setIsSessionActive(false);
-        setStatusText("Session ended. Click the mic to talk again.");
+        setStatusText("Session ended. Click to talk again.");
         
         liveSessionRef.current?.then(session => session.close());
         liveSessionRef.current = null;
@@ -93,28 +99,24 @@ const LiveChat: React.FC<{ language: Language }> = ({ language }) => {
         scriptProcessorRef.current?.disconnect();
         scriptProcessorRef.current = null;
         
-        if (inputAudioContextRef.current?.state !== 'closed') {
-            inputAudioContextRef.current?.close();
-        }
+        inputAudioContextRef.current?.close().catch(console.error);
         inputAudioContextRef.current = null;
         
         stopAllPlayback();
         
         setConversation([]);
-        setCurrentUserTranscript("");
-        setCurrentAssistantTranscript("");
-        currentUserTranscriptRef.current = "";
-        currentAssistantTranscriptRef.current = "";
+        currentUserTurnIdRef.current = null;
+        currentAssistantTurnIdRef.current = null;
     }, [stopAllPlayback]);
     
     const handleStartSession = useCallback(async () => {
-        // Cleanup previous session just in case
-        handleStopSession();
+        if (isSessionActive) return;
+        handleStopSession(); // Clean up previous session just in case
 
         setIsSessionActive(true);
         setStatusText("Connecting...");
         
-        if (!outputAudioContextRef.current) {
+        if (!outputAudioContextRef.current || outputAudioContextRef.current.state === 'closed') {
             outputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
         }
 
@@ -129,32 +131,42 @@ const LiveChat: React.FC<{ language: Language }> = ({ language }) => {
 
             liveSessionRef.current = startLiveConversation(
                 language,
-                (text) => { // User Transcription
-                    currentUserTranscriptRef.current += text;
-                    setCurrentUserTranscript(currentUserTranscriptRef.current);
+                (text, isFinal) => { // User Transcription
                     setStatusText("Listening...");
+                    if (!currentUserTurnIdRef.current) {
+                        const newId = uuidv4();
+                        currentUserTurnIdRef.current = newId;
+                        setConversation(prev => [...prev, { id: newId, speaker: 'You', text, isFinal }]);
+                    } else {
+                        setConversation(prev => prev.map(t => t.id === currentUserTurnIdRef.current ? { ...t, text, isFinal } : t));
+                    }
                 },
                 (text) => { // Assistant Transcription
-                    currentAssistantTranscriptRef.current += text;
-                    setCurrentAssistantTranscript(currentAssistantTranscriptRef.current);
                     setStatusText("Assistant is speaking...");
+                     if (!currentAssistantTurnIdRef.current) {
+                        const newId = uuidv4();
+                        currentAssistantTurnIdRef.current = newId;
+                        setConversation(prev => [...prev, { id: newId, speaker: 'Assistant', text, isFinal: false }]);
+                    } else {
+                        setConversation(prev => prev.map(t => t.id === currentAssistantTurnIdRef.current ? { ...t, text } : t));
+                    }
                 },
                 onAssistantAudio,
                 () => { // Turn Complete
-                    if (currentUserTranscriptRef.current || currentAssistantTranscriptRef.current) {
-                        setConversation(prev => [
-                            ...prev,
-                            { speaker: 'You', text: currentUserTranscriptRef.current },
-                            { speaker: 'Assistant', text: currentAssistantTranscriptRef.current }
-                        ]);
+                    if(currentUserTurnIdRef.current) {
+                        setConversation(prev => prev.map(t => t.id === currentUserTurnIdRef.current ? { ...t, isFinal: true } : t));
                     }
-                    currentUserTranscriptRef.current = "";
-                    currentAssistantTranscriptRef.current = "";
-                    setCurrentUserTranscript("");
-                    setCurrentAssistantTranscript("");
+                     if(currentAssistantTurnIdRef.current) {
+                        setConversation(prev => prev.map(t => t.id === currentAssistantTurnIdRef.current ? { ...t, isFinal: true } : t));
+                    }
+                    currentUserTurnIdRef.current = null;
+                    currentAssistantTurnIdRef.current = null;
                     setStatusText("Connected. Speak now.");
                 },
-                stopAllPlayback // Interrupted
+                () => { // Interrupted
+                    stopAllPlayback();
+                    setStatusText("Interrupted. Speak again.");
+                }
             );
 
             await liveSessionRef.current;
@@ -181,7 +193,7 @@ const LiveChat: React.FC<{ language: Language }> = ({ language }) => {
             setStatusText("Microphone access denied.");
             setIsSessionActive(false);
         }
-    }, [language, onAssistantAudio, stopAllPlayback, handleStopSession]);
+    }, [language, onAssistantAudio, stopAllPlayback, handleStopSession, isSessionActive]);
 
     useEffect(() => {
         return () => {
@@ -192,11 +204,9 @@ const LiveChat: React.FC<{ language: Language }> = ({ language }) => {
     return (
         <div className="h-full flex flex-col items-center justify-between p-4 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
             <div className="w-full flex-grow overflow-y-auto pr-2 mb-4">
-                {conversation.map((entry, index) => (
-                    <TranscriptBubble key={index} speaker={entry.speaker} text={entry.text} language={language} isFinal={true} />
+                {conversation.map((transcript) => (
+                    <TranscriptBubble key={transcript.id} transcript={transcript} language={language} />
                 ))}
-                {currentUserTranscript && <TranscriptBubble speaker="You" text={currentUserTranscript} language={language} isFinal={false} />}
-                {currentAssistantTranscript && <TranscriptBubble speaker="Assistant" text={currentAssistantTranscript} language={language} isFinal={false} />}
                  <div ref={messagesEndRef} />
             </div>
 
