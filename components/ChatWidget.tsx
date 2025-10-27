@@ -33,28 +33,33 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ closeWidget, theme, togg
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-        <div className={`flex items-center space-x-3 ${language === 'ar' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-            <RobotIcon className={`h-8 w-8 text-brand-primary dark:text-white ${language === 'ar' ? 'transform scale-x-[-1]' : ''}`} />
-            <h2 className={`text-lg font-bold text-gray-800 dark:text-white ${language === 'ar' ? 'font-arabic' : 'font-sans'}`}>{T.companyName}</h2>
-        </div>
+        {/* Title Group: Icon + Company Name */}
         <div className="flex items-center space-x-2">
-            <button onClick={toggleTheme} className="p-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">
-                {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
-            </button>
-            <select
-                value={language}
-                // FIX: Cast the event target value to Language to match the state setter's expected type.
-                onChange={(e) => setLanguage(e.target.value as Language)}
-                className="bg-transparent text-gray-600 dark:text-gray-300 font-semibold rounded-md p-1 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-brand-accent"
-            >
-                <option value="en">EN</option>
-                <option value="ar">AR</option>
-            </select>
-            <button onClick={closeWidget} className="p-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">
-                <CloseIcon />
-            </button>
+          <RobotIcon className={`h-8 w-8 text-brand-primary dark:text-white ${language === 'ar' ? 'transform scale-x-[-1]' : ''}`} />
+          <h2 className={`text-lg font-bold text-gray-800 dark:text-white ${language === 'ar' ? 'font-arabic' : 'font-sans'}`}>
+            {T.companyName}
+          </h2>
+        </div>
+
+        {/* Controls Group: Theme, Language, Close */}
+        <div className="flex items-center space-x-2">
+          <button onClick={toggleTheme} className="p-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">
+            {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+          </button>
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as Language)}
+            className="bg-transparent text-gray-600 dark:text-gray-300 font-semibold rounded-md p-1 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-brand-accent"
+          >
+            <option value="en">EN</option>
+            <option value="ar">AR</option>
+          </select>
+          <button onClick={closeWidget} className="p-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">
+            <CloseIcon />
+          </button>
         </div>
       </div>
+
 
       {/* Mode Tabs */}
       <div className="flex p-1 bg-gray-100 dark:bg-gray-900 flex-shrink-0">
